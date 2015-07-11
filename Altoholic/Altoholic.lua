@@ -264,7 +264,7 @@ local function MerchantFrame_UpdateMerchantInfoHook()
 	
 			if link then		-- if there's a valid item link in this slot ..
 				local itemID = addon:GetIDFromLink(link)
-				if itemID ~= 0 then		-- if there's a valid item link in this slot ..
+				if itemID ~= 0 and itemID ~= nil then		-- if there's a valid item link in this slot ..
 					local _, _, _, _, _, itemType, itemSubType = GetItemInfo(itemID)
 					
 					local r, g, b = 1, 1, 1
