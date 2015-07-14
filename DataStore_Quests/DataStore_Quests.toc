@@ -1,4 +1,4 @@
-﻿## Interface: 60100
+﻿## Interface: 60200
 ## Title: DataStore_Quests
 ## Notes: Stores information about character quests
 ## Author: Thaoky (EU-Marécages de Zangar)

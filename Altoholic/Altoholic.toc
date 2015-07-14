@@ -1,4 +1,4 @@
-﻿## Interface: 60100
+﻿## Interface: 60200
 ## Title: Altoholic
 ## Title-zhCN: |cffeedd99 [物品] |r: 全角色统计 Altoholic
 ## X-Curse-Packaged-Version: r160

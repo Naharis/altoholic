@@ -1,4 +1,4 @@
-﻿## Interface: 60100
+﻿## Interface: 60200
 ## Title: Altoholic_Summary
 ## Notes: Altoholic's Summary Tab
 ## Author: Thaoky (EU-Marécages de Zangar)

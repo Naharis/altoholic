@@ -1,4 +1,4 @@
-﻿## Interface: 60100
+﻿## Interface: 60200
 ## Title: Altoholic_Characters
 ## Notes: Altoholic's Characters UI
 ## Author: Thaoky (EU-Marécages de Zangar)

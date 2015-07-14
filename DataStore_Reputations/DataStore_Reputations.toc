@@ -1,4 +1,4 @@
-﻿## Interface: 60100
+﻿## Interface: 60200
 ## Title: DataStore_Reputations
 ## Notes: Stores information about character reputation levels
 ## Author: Thaoky (EU-Marécages de Zangar)

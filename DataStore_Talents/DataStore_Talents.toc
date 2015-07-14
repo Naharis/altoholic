@@ -1,4 +1,4 @@
-﻿## Interface: 60100
+﻿## Interface: 60200
 ## Title: DataStore_Talents
 ## Notes: Stores information about character talents
 ## Author: Thaoky (EU-Marécages de Zangar)
