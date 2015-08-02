@@ -8,16 +8,7 @@ local BI = LibStub("LibBabble-Inventory-3.0"):GetLookupTable()
 local THIS_ACCOUNT = "Default"
 local THIS_REALM = GetRealmName()
 
-local Orig_GameTooltip_OnShow
-local Orig_GameTooltip_SetItem
-local Orig_GameTooltip_ClearItem
-local Orig_GameTooltip_SetCurrencyToken
--- local Orig_GameTooltip_SetSpell
-
-local Orig_ItemRefTooltip_OnShow
-local Orig_ItemRefTooltip_SetItem
-local Orig_ItemRefTooltip_ClearItem
--- local Orig_ItemRefTooltip_SetSpell
+local storedLink = nil
 
 local GatheringNodes = {			-- Add herb/ore possession info to Plants/Mines, thanks to Tempus on wowace for gathering this.
 
@@ -534,22 +525,18 @@ end
 
 -- ** GameTooltip hooks **
 local function OnGameTooltipShow(tooltip, ...)
-	if Orig_GameTooltip_OnShow then
-		Orig_GameTooltip_OnShow(tooltip, ...)
-	end	
-	
 	ShowGatheringNodeCounters()
 	GameTooltip:Show()
 end
 
 local function OnGameTooltipSetItem(tooltip, ...)
-	if Orig_GameTooltip_SetItem then
-		Orig_GameTooltip_SetItem(tooltip, ...)
-	end
-	
 	if (not isTooltipDone) and tooltip then
-		local name, link = tooltip:GetItem()
 		isTooltipDone = true
+		local name, link = tooltip:GetItem()
+		-- Blizzard broke tooltip:GetItem() in 6.2. Detect and fix the bug if possible.
+		if name == "" then
+			link = storedLink
+		end
 		if link then
 			ProcessTooltip(tooltip, name, link)
 		end
@@ -559,12 +546,10 @@ end
 local function OnGameTooltipCleared(tooltip, ...)
 	isTooltipDone = nil
 	isNodeDone = nil		-- for informant
-	return Orig_GameTooltip_ClearItem(tooltip, ...)
+	storedLink = nil
 end
 
 local function Hook_SetCurrencyToken(self,index,...)
-	Orig_GameTooltip_SetCurrencyToken(self, index, ...)
-	
 	if not index then return end
 
 	local currency = GetCurrencyListInfo(index)
@@ -591,19 +576,11 @@ end
 
 -- ** ItemRefTooltip hooks **
 local function OnItemRefTooltipShow(tooltip, ...)
-	if Orig_ItemRefTooltip_OnShow then
-		Orig_ItemRefTooltip_OnShow(tooltip, ...)
-	end
-
 	addon:ListCharsOnQuest( _G["ItemRefTooltipTextLeft1"]:GetText(), UnitName("player"), ItemRefTooltip)
 	ItemRefTooltip:Show()
 end
 
 local function OnItemRefTooltipSetItem(tooltip, ...)
-	if Orig_ItemRefTooltip_SetItem then
-		Orig_ItemRefTooltip_SetItem(tooltip, ...)
-	end
-	
 	if (not isTooltipDone) and tooltip then
 		local name, link = tooltip:GetItem()
 		isTooltipDone = true
@@ -615,39 +592,66 @@ end
 
 local function OnItemRefTooltipCleared(tooltip, ...)
 	isTooltipDone = nil
-	return Orig_ItemRefTooltip_ClearItem(tooltip, ...)
 end
 
+-- install a pre-/post-hook on the given tooltip's method
+-- simplified version of LibExtraTip's hooking
+local function InstallHook(tooltip, method, prehook, posthook)
+	local orig = tooltip[method]
+	local stub = function(...)
+		if prehook then prehook(...) end
+		local a,b,c,d,e,f,g,h,i,j,k = orig(...)
+		if posthook then posthook(...) end
+		return a,b,c,d,e,f,g,h,i,j,k
+	end
+	tooltip[method] = stub
+end
 
 function addon:InitTooltip()
-	-- save all function pointers
-	Orig_GameTooltip_OnShow = GameTooltip:GetScript("OnShow")
-	Orig_GameTooltip_SetItem = GameTooltip:GetScript("OnTooltipSetItem")
-	Orig_GameTooltip_ClearItem = GameTooltip:GetScript("OnTooltipCleared")
-	Orig_GameTooltip_SetCurrencyToken = GameTooltip.SetCurrencyToken
-	-- Orig_GameTooltip_SetSpell = GameTooltip:GetScript("OnTooltipSetSpell")
+	-- hooking config, format: MethodName = { prehook, posthook }
+	local tooltipMethodHooks = {
+		SetCurrencyToken = {
+			nil,
+			Hook_SetCurrencyToken
+		},
+		SetTradeSkillItem = {
+			function(self,index,reagentIndex)
+				local owner = GameTooltip:GetOwner()
+				if reagentIndex then
+					storedLink = GetTradeSkillReagentItemLink(index,reagentIndex)
+				else
+					storedLink = GetTradeSkillItemLink(index)
+				end
+			end,
+			nil
+		},
+		SetQuestItem = {
+			function(self,type,index) storedLink = GetQuestItemLink(type,index) end,
+			nil
+		},
+		SetQuestLogItem = {
+			function(self,type,index) storedLink = GetQuestLogItemLink(type,index) end,
+			nil
+		}
+	}
+	-- install all method hooks
+	for m, hooks in pairs(tooltipMethodHooks) do
+		InstallHook(GameTooltip, m, hooks[1], hooks[2])
+	end
 
-	Orig_ItemRefTooltip_OnShow = ItemRefTooltip:GetScript("OnShow")
-	Orig_ItemRefTooltip_SetItem = ItemRefTooltip:GetScript("OnTooltipSetItem")
-	Orig_ItemRefTooltip_ClearItem = ItemRefTooltip:GetScript("OnTooltipCleared")
-	-- Orig_ItemRefTooltip_SetSpell = ItemRefTooltip:GetScript("OnTooltipSetSpell")
+	-- script hooks
+	GameTooltip:HookScript("OnShow", OnGameTooltipShow)
+	GameTooltip:HookScript("OnTooltipSetItem", OnGameTooltipSetItem)
+	GameTooltip:HookScript("OnTooltipCleared", OnGameTooltipCleared)
 
-	-- set new function pointers
-	GameTooltip:SetScript("OnShow", OnGameTooltipShow)
-	GameTooltip:SetScript("OnTooltipSetItem", OnGameTooltipSetItem)
-	GameTooltip:SetScript("OnTooltipCleared", OnGameTooltipCleared)
-	GameTooltip.SetCurrencyToken = Hook_SetCurrencyToken
-	-- GameTooltip:SetScript("OnTooltipSetSpell", OnGameTooltipSetSpell)
-
-	ItemRefTooltip:SetScript("OnShow", OnItemRefTooltipShow)
-	ItemRefTooltip:SetScript("OnTooltipSetItem", OnItemRefTooltipSetItem)
-	ItemRefTooltip:SetScript("OnTooltipCleared", OnItemRefTooltipCleared)
-	-- ItemRefTooltip:SetScript("OnTooltipSetSpell", OnItemRefTooltipSetSpell)
+	ItemRefTooltip:HookScript("OnShow", OnItemRefTooltipShow)
+	ItemRefTooltip:HookScript("OnTooltipSetItem", OnItemRefTooltipSetItem)
+	ItemRefTooltip:HookScript("OnTooltipCleared", OnItemRefTooltipCleared)
 	
-	-- LinkWrangler supoprt
-   if LinkWrangler then
-      LinkWrangler.RegisterCallback ("Altoholic",  Hook_LinkWrangler, "refresh")
-   end
+	-- LinkWrangler support
+	if LinkWrangler then
+		LinkWrangler.RegisterCallback ("Altoholic",  Hook_LinkWrangler, "refresh")
+	end
 end
 
 function addon:RefreshTooltip()
