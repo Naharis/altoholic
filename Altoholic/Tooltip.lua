@@ -535,7 +535,10 @@ local function OnGameTooltipSetItem(tooltip, ...)
 		local name, link = tooltip:GetItem()
 		-- Blizzard broke tooltip:GetItem() in 6.2. Detect and fix the bug if possible.
 		if name == "" then
-			link = storedLink
+			local itemID = addon:GetIDFromLink(link)
+			if not itemID then
+				link = storedLink
+			end
 		end
 		if link then
 			ProcessTooltip(tooltip, name, link)
